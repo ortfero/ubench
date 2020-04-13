@@ -1,9 +1,3 @@
-# ubench
-C++17 one-header library for dead simple micro benchmarks
-
-# snippet
-
-```cpp
 #include <iostream>
 #include <thread>
 
@@ -32,10 +26,3 @@ int main() {
 
   return 0;
 }
-```
-
-Output on my machine:
-```
-fast operation - 3.4 ns [took 84 us]
-slow operation - 10771087.0 ns [took 226550 us]
-```
