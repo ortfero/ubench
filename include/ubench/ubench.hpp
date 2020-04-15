@@ -83,14 +83,14 @@ inline std::chrono::microseconds elapsed_us(std::chrono::steady_clock::time_poin
 
 template<typename F> result UBENCH_NOINLINE
 run(F&& f,
-    unsigned nof_tests = 20,
-    std::chrono::steady_clock::duration min_duration = std::chrono::steady_clock::duration{500}) {
+    unsigned nof_tests = 10,
+    std::chrono::steady_clock::duration min_duration = std::chrono::steady_clock::duration{5000}) {
   
   using namespace std::chrono;
 
   auto const origin = steady_clock::now();
   
-  constexpr unsigned max_iterations = 10000;
+  constexpr unsigned max_iterations = 100000;
   unsigned n = 1; auto elapsed = steady_clock::duration{};
   
   do {
