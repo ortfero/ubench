@@ -1,5 +1,5 @@
 # ubench
-C++17 one-header library for dead simple micro benchmarks
+C++17 one-header library for dead simple micro benchmarking
 
 # snippet
 
