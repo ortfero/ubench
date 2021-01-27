@@ -60,9 +60,17 @@ namespace ubench {
     template<typename Stream>
     Stream& operator<<(Stream& os, result const& r) noexcept {
         char time[64];
-        std::snprintf(time, sizeof(time), "%.1f", r.time.count());
-        time[63] = '\0';
-        os << time << " ns";
+
+        if(r.time.count() >= 10000.) {
+            std::snprintf(time, sizeof(time), "%.1f", r.time.count() / 1000.);
+            time[63] = '\0';
+            os << time << " us";
+        } else {
+            std::snprintf(time, sizeof(time), "%.1f", r.time.count());
+            time[63] = '\0';
+            os << time << " ns";
+        }
+        
         if(r.code == result_code::ok)
             return os;
         os << " (probably " << describe(r.code) << ')';
