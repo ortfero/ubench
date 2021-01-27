@@ -77,7 +77,7 @@ namespace ubench {
 #endif
 
 
-    template<size_t max_samples = 30, typename F>
+    template<std::size_t max_samples = 30, typename F>
     result UBENCH_NOINLINE run(F &&f) {
         using namespace std;
         using namespace std::chrono;
