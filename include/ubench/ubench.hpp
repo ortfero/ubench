@@ -36,7 +36,7 @@ namespace ubench {
     enum class result_code { ok, optimized, debug, unstable };
 
 
-    inline char const *describe(result_code rc) noexcept {
+    inline char const* describe(result_code rc) noexcept {
         switch(rc) {
         case result_code::ok: return "ok";
         case result_code::optimized: return "optimized";
@@ -58,7 +58,7 @@ namespace ubench {
 
 
     template<typename Stream>
-    Stream &operator<<(Stream &os, result const &r) noexcept {
+    Stream& operator<<(Stream& os, result const& r) noexcept {
         char time[64];
         std::snprintf(time, sizeof(time), "%.1f", r.time.count());
         time[63] = '\0';
@@ -78,7 +78,7 @@ namespace ubench {
 
 
     template<std::size_t max_samples = 30, typename F>
-    result UBENCH_NOINLINE run(F &&f) {
+    result UBENCH_NOINLINE run(F&& f) {
         using namespace std;
         using namespace std::chrono;
 
@@ -93,7 +93,7 @@ namespace ubench {
         auto run_count = 10u;
         for(; run_count <= max_run_count; run_count *= scale) {
             auto const last_elapsed = elapsed;
-            start                   = steady_clock::now();
+            start = steady_clock::now();
             for(auto i = 0u; i != run_count; ++i)
                 f();
             elapsed = (steady_clock::now() - start).count();
@@ -125,7 +125,7 @@ namespace ubench {
         auto const n = samples.size();
         auto const avg = sum / n;
         auto delta_sum = 0.;
-        for(auto const& sample : samples) {
+        for(auto const& sample: samples) {
             auto const delta = sample - avg;
             delta_sum += delta * delta;
         }
@@ -134,16 +134,16 @@ namespace ubench {
         // filter samples by (3 * sigma)
         auto confidence_sum = 0.;
         auto confidence_n = 0u;
-        for(auto const& sample : samples) {
-            if (abs(sample - avg) > 3 * sigma)
+        for(auto const& sample: samples) {
+            if(abs(sample - avg) > 3 * sigma)
                 continue;
             confidence_sum += sample;
             ++confidence_n;
         }
-        result_time const rt { confidence_sum / confidence_n };
+        result_time const rt {confidence_sum / confidence_n};
 
-        if (double(confidence_n) / n < 0.92)
-            return { result_code::unstable, rt };
+        if(double(confidence_n) / n < 0.92)
+            return {result_code::unstable, rt};
 
 #ifdef _MSC_VER
 #    ifdef NDEBUG
