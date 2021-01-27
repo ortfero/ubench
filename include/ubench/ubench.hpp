@@ -1,5 +1,5 @@
 ﻿/* This file is part of ubench library
- * Copyright 2020 Andrei Ilin <ortfero@gmail.com>
+ * Copyright 2020-2021 Andrei Ilin <ortfero@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -8,8 +8,8 @@
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -19,135 +19,126 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
- 
+
 #pragma once
 
 
+#include <algorithm>
 #include <chrono>
-#include <set>
-#include <iosfwd>
-#include <iomanip>
+#include <cmath>
+#include <cstring>
+#include <vector>
 
 
 namespace ubench {
 
 
-
-struct result {
-
-  enum code {
-    ok, optimized
-  };
-  
-  using timing = std::chrono::duration<double, std::nano>;
-
-  code code{ok};
-  timing time{0.};
-  std::chrono::microseconds took{0};
-
-  result() noexcept = default;
-  result(result const&) noexcept = default;
-  result& operator = (result const&) noexcept = default;
-  explicit operator bool () const noexcept { return code == ok; }
+    enum class result_code { ok, optimized, debug, unstable };
 
 
-  result(enum code c, std::chrono::microseconds took) noexcept:
-    code{c}, took{took} { }
-
-
-  result(timing time, std::chrono::microseconds took) noexcept:
-    code{ok}, time{time}, took{took}
-  { }
-
-
-  char const* message() const noexcept {
-    switch(code) {
-      case ok:
-        return "ok";
-      case optimized:
-        return "value was probably optimized";
-      default:
-        return "unknown";
+    inline char const *describe(result_code rc) noexcept {
+        switch(rc) {
+        case result_code::ok: return "ok";
+        case result_code::optimized: return "optimized";
+        case result_code::debug: return "debug";
+        default: return "unknown";
+        }
     }
-  }
-  
-  template<typename charT, typename traits> friend
-  std::basic_ostream<charT, traits>&
-    operator << (std::basic_ostream<charT, traits>& os, result const& r) noexcept {
-      if(!r)
-        return os << "unable to benchmark because " << r.message();
-      return os << std::setprecision(1) << std::fixed << r.time.count() << " ns";
-    }
-}; // result
 
+
+    using result_time = std::chrono::duration<double, std::nano>;
+
+
+    struct result {
+        result_code code {result_code::ok};
+        result_time time {0.};
+
+    };   // result
+
+
+    template<typename Stream>
+    Stream &operator<<(Stream &os, result const &r) noexcept {
+        char time[64];
+        std::snprintf(time, sizeof(time), "%.1f", r.time.count());
+        time[63] = '\0';
+        os << time << " ns";
+        if(r.code == result_code::ok)
+            return os;
+        os << " (probably " << describe(r.code) << ')';
+        return os;
+    }
 
 
 #ifdef _MSC_VER
-#define UBENCH_NOINLINE __declspec(noinline)
+#    define UBENCH_NOINLINE __declspec(noinline)
 #else
-#define UBENCH_NOINLINE __attribute__(noinline)
+#    define UBENCH_NOINLINE __attribute__(noinline)
 #endif
 
 
+    template<size_t max_samples = 30, typename F>
+    result UBENCH_NOINLINE run(F &&f) {
+        static_assert(max_samples % 2 == 0, "max_samples should be even");
 
-namespace detail {
-  
-inline std::chrono::microseconds elapsed_us(std::chrono::steady_clock::time_point tp) {
-  using namespace std::chrono;  
-  return duration_cast<microseconds>(steady_clock::now() - tp);
-}
-  
-} // detail
+        using namespace std;
+        using namespace std::chrono;
+
+        constexpr auto max_run_count = 1000000u;
+        constexpr auto scale = 10u;
+
+        auto start = steady_clock::now();
+        f();
+        auto elapsed = (steady_clock::now() - start).count();
+
+        // determine the run_count
+        auto run_count = 10u;
+        for(; run_count <= max_run_count; run_count *= scale) {
+            auto const last_elapsed = elapsed;
+            start                   = steady_clock::now();
+            for(auto i = 0u; i != run_count; ++i)
+                f();
+            elapsed      = (steady_clock::now() - start).count();
+            auto const k = unsigned(std::round(double(elapsed) / last_elapsed));
+            if(k == scale)
+                break;
+        }
+        if(run_count > max_run_count)
+            return {result_code::optimized,
+                    result_time {elapsed * scale / run_count}};
+
+        vector<double> samples;
+        samples.reserve(max_samples + 1);
+        samples.push_back(double(elapsed) / run_count);
+
+        // get samples
+        for(auto i = 0u; i != max_samples; ++i) {
+            start = steady_clock::now();
+            for(auto j = 0u; j != run_count; ++j)
+                f();
+            elapsed           = (steady_clock::now() - start).count();
+            auto const sample = double(elapsed) / run_count;
+            samples.push_back(sample);
+        }
+
+        std::sort(samples.begin(), samples.end());
+
+        // return median
+        result_time const rt {samples[max_samples / 2]};
+
+#ifdef _MSC_VER
+#    ifdef NDEBUG
+        return {result_code::ok, rt};
+#    else
+        return {result_code::debug, rt};
+#    endif   // NDEBUG
+#else
+#    ifdef __OPTIMIZE__
+        return {result_code::ok, rt};
+#    else
+        return {result_code::debug, rt};
+#    endif   // __OPTIMIZE__
+#endif   // _MSC_VER
+    }
 
 
-
-template<typename F> result UBENCH_NOINLINE
-run(F&& f,
-    unsigned nof_tests = 10,
-    std::chrono::steady_clock::duration min_duration = std::chrono::steady_clock::duration{5000}) {
-  
-  using namespace std::chrono;
-
-  auto const origin = steady_clock::now();
-  
-  constexpr unsigned max_iterations = 100000;
-  unsigned n = 1; auto elapsed = steady_clock::duration{};
-  
-  do {
-    auto const started = steady_clock::now();
-    for(unsigned i = 0; i != n; ++i)
-      f();
-    elapsed = steady_clock::now() - started;
-    if(elapsed >= min_duration)
-      break;
-    n *= 10;
-  } while(n <= max_iterations);
-
-  if(elapsed < min_duration)
-    return {result::optimized, detail::elapsed_us(origin)};
-
-  std::multiset<steady_clock::duration> samples;
-  for(unsigned i = 0; i != nof_tests; ++i) {
-    auto const started = steady_clock::now();
-    for(unsigned j = 0; j != n; ++j)
-      f();
-    samples.emplace(steady_clock::now() - started);
-  }
-
-  // filter "cold" results
-  for(unsigned i = 0; i != nof_tests / 5; ++i) {
-    auto end = samples.end();
-    samples.erase(--end);
-  }
-
-  steady_clock::duration::rep average = 0;
-  for(steady_clock::duration const& each: samples)
-    average += each.count();
-  average /= samples.size();
-  
-  auto const ns = duration_cast<nanoseconds>(steady_clock::duration{average}).count();
-  return {result::timing{double(ns) / n}, detail::elapsed_us(origin)};
-}
-
-
-} // ubench
+}   // namespace ubench
