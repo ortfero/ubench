@@ -32,3 +32,5 @@
 *.app
 *.user
 build/
+/benchmark/.vs/ubench/v16
+/benchmark/x64
