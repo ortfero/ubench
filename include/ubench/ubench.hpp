@@ -52,7 +52,6 @@ namespace ubench {
     struct result {
         result_code code {result_code::ok};
         result_time time {0.};
-
     };   // result
 
 
@@ -80,7 +79,7 @@ namespace ubench {
 #ifdef _MSC_VER
 #    define UBENCH_NOINLINE __declspec(noinline)
 #else
-#    define UBENCH_NOINLINE __attribute__(noinline)
+#    define UBENCH_NOINLINE __attribute__((noinline))
 #endif
 
 
