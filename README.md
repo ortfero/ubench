@@ -1,5 +1,7 @@
 # ubench
 
+[![License](https://img.shields.io/github/license/ToruNiina/toml11.svg?style=flat)](LICENSE)
+
 C++ 11 one-header library for dead simple micro benchmarking
 
 
