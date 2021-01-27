@@ -49,7 +49,7 @@ int main() {
 
 Possible output:
 ```
-inc - 3.4 ns
+inc: 3.4 ns
 ```
 
 
