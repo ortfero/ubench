@@ -1,7 +1,7 @@
 # ubench
 
 [![License](https://img.shields.io/github/license/ortfero/ubench)](LICENSE)
-[![Build Status on GitHub Actions](https://github.com/ortfero/ubench/workflows/MSBuild/badge.svg)](https://github.com/ortfero/ubench/actions)
+[![Build Status on GitHub Actions](https://github.com/ortfero/ubench/workflows/windows/badge.svg)](https://github.com/ortfero/ubench/actions)
 
 C++ 11 one-header library for dead simple micro benchmarking
 
