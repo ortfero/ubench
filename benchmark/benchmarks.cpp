@@ -8,7 +8,7 @@
 int main() {
     using namespace std;
 
-    int x                   = 0;
+    int x = 0;
     auto const fast_benched = ubench::run([&] { ++x; });
     cout << "fast operation - " << fast_benched << '\n';
 

@@ -41,6 +41,7 @@ namespace ubench {
         case result_code::ok: return "ok";
         case result_code::optimized: return "optimized";
         case result_code::debug: return "debug";
+        case result_code::unstable: return "unstable";
         default: return "unknown";
         }
     }
@@ -78,8 +79,6 @@ namespace ubench {
 
     template<size_t max_samples = 30, typename F>
     result UBENCH_NOINLINE run(F &&f) {
-        static_assert(max_samples % 2 == 0, "max_samples should be even");
-
         using namespace std;
         using namespace std::chrono;
 
@@ -97,7 +96,7 @@ namespace ubench {
             start                   = steady_clock::now();
             for(auto i = 0u; i != run_count; ++i)
                 f();
-            elapsed      = (steady_clock::now() - start).count();
+            elapsed = (steady_clock::now() - start).count();
             auto const k = unsigned(std::round(double(elapsed) / last_elapsed));
             if(k == scale)
                 break;
@@ -111,19 +110,40 @@ namespace ubench {
         samples.push_back(double(elapsed) / run_count);
 
         // get samples
+        auto sum = 0.;
         for(auto i = 0u; i != max_samples; ++i) {
             start = steady_clock::now();
             for(auto j = 0u; j != run_count; ++j)
                 f();
-            elapsed           = (steady_clock::now() - start).count();
+            elapsed = (steady_clock::now() - start).count();
             auto const sample = double(elapsed) / run_count;
             samples.push_back(sample);
+            sum += sample;
         }
 
-        std::sort(samples.begin(), samples.end());
+        // calculate average and sigma
+        auto const n = samples.size();
+        auto const avg = sum / n;
+        auto delta_sum = 0.;
+        for(auto const& sample : samples) {
+            auto const delta = sample - avg;
+            delta_sum += delta * delta;
+        }
+        auto const sigma = sqrt(delta_sum / n);
 
-        // return median
-        result_time const rt {samples[max_samples / 2]};
+        // filter samples by (3 * sigma)
+        auto confidence_sum = 0.;
+        auto confidence_n = 0u;
+        for(auto const& sample : samples) {
+            if (abs(sample - avg) > 3 * sigma)
+                continue;
+            confidence_sum += sample;
+            ++confidence_n;
+        }
+        result_time const rt { confidence_sum / confidence_n };
+
+        if (double(confidence_n) / n < 0.92)
+            return { result_code::unstable, rt };
 
 #ifdef _MSC_VER
 #    ifdef NDEBUG
