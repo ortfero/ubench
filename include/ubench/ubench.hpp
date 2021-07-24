@@ -76,11 +76,26 @@ namespace ubench {
     }
 
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER)
+
 #    define UBENCH_NOINLINE __declspec(noinline)
+
+#    pragma optimize("", off)
+template<typename T> void dont_optimize(T&&) { }
+#    pragma optimize("", on)
+
 #else
 #    define UBENCH_NOINLINE __attribute__((noinline))
+
+    template<typename T> void dont_optimize(T&& val) {
+#if defined(__clang__)
+        asm volatile("" : "+r,m"(val) : : "memory");
+#else
+        asm volatile("" : "+m,r"(val) : : "memory");
 #endif
+    }
+
+#endif // _MSC_VER
 
 
     template<std::size_t max_samples = 30, typename F>
