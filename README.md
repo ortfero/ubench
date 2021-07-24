@@ -42,14 +42,14 @@ int main() {
 	if(code != ubench::result_code::ok)
 		std::printf("%s\n", ubench::describe(code));
 	else
-		std::printf("inc: %.1f\n", time.count());
+		std::printf("inc: %.1f ns\n", time.count());
 	return 0;
 }
 ```
 
 Possible output:
 ```
-inc - 3.4 ns
+inc: 3.4 ns
 ```
 
 
