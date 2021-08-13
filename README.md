@@ -55,7 +55,7 @@ inc: 3.4 ns
 
 ## Installation
 
-Just place `ubench/ubench.hpp` somewhere at include path.
+Drop `ubench/ubench.hpp` somewhere at include path.
 
 
 ## Supported platforms and compilers
